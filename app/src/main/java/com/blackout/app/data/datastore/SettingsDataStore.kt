@@ -8,6 +8,7 @@ import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.emptyPreferences
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
+import androidx.datastore.preferences.core.stringSetPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import com.blackout.app.domain.service.GoalChange
 import com.blackout.app.domain.service.StreakState
@@ -81,6 +82,7 @@ class SettingsDataStore @Inject constructor(
         val NOTIFICATIONS_ENABLED = booleanPreferencesKey("notifications_enabled")
 
         val STREAK_STATE = stringPreferencesKey("streak_state")
+        val FAVORITE_QUOTES = stringSetPreferencesKey("favorite_quote_ids")
     }
 
     // One shared upstream: an unreadable/corrupt file falls back to defaults instead of
@@ -129,6 +131,7 @@ class SettingsDataStore @Inject constructor(
 
     val reminderTime: Flow<String> = prefs.map { it[Keys.REMINDER_TIME] ?: "09:00" }
     val notificationsEnabled: Flow<Boolean> = prefs.map { it[Keys.NOTIFICATIONS_ENABLED] ?: true }
+    val favoriteQuoteIds: Flow<Set<String>> = prefs.map { it[Keys.FAVORITE_QUOTES] ?: emptySet() }.distinctUntilChanged()
 
     val streakState: Flow<StreakState> = prefs.map {
         it[Keys.STREAK_STATE]?.let(StreakStateJson::decode) ?: StreakState()
@@ -146,6 +149,13 @@ class SettingsDataStore @Inject constructor(
     suspend fun clearSeedColor() { context.dataStore.edit { it.remove(Keys.SEED_COLOR) } }
     suspend fun setReminderTime(time: String) { context.dataStore.edit { it[Keys.REMINDER_TIME] = time } }
     suspend fun setNotificationsEnabled(enabled: Boolean) { context.dataStore.edit { it[Keys.NOTIFICATIONS_ENABLED] = enabled } }
+
+    suspend fun toggleFavoriteQuote(quoteId: String) {
+        context.dataStore.edit { prefs ->
+            val current = prefs[Keys.FAVORITE_QUOTES] ?: emptySet()
+            prefs[Keys.FAVORITE_QUOTES] = if (current.contains(quoteId)) current - quoteId else current + quoteId
+        }
+    }
 
     suspend fun updateStreakState(transform: (StreakState) -> StreakState) {
         context.dataStore.edit { prefs ->
