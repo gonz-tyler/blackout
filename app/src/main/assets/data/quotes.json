@@ -1,0 +1,20 @@
+[
+  {
+    "id": "q001",
+    "category": "stoic",
+    "author": "Marcus Aurelius",
+    "text": {
+      "en": "You have power over your mind - not outside events. Realize this, and you will find strength.",
+      "es": "Tienes poder sobre tu mente, no sobre los eventos externos. Date cuenta de esto y encontrarás fuerza."
+    }
+  },
+  {
+    "id": "q002",
+    "category": "buddhist",
+    "author": "Buddha",
+    "text": {
+      "en": "The mind is everything. What you think you become.",
+      "es": "La mente lo es todo. En lo que piensas te conviertes."
+    }
+  }
+]
