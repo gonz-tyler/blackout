@@ -48,11 +48,16 @@ import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import com.blackout.app.data.datastore.FeatureToggles
 import com.blackout.app.data.datastore.SettingsDataStore
-import com.blackout.ui.journey.JourneyScreen
-import com.blackout.ui.profile.ProfileScreen
-import com.blackout.ui.today.TodayScreen
+import com.blackout.app.data.repository.QuotesRepository
+import com.blackout.app.ui.favorites.FavoritesScreen
+import com.blackout.app.ui.journal.JournalScreen
+import com.blackout.app.ui.profile.ProfileScreen
+import com.blackout.app.ui.journey.JourneyScreen
+import com.blackout.app.ui.today.TodayScreen
 import com.blackout.app.ui.theme.BlackoutTheme
+import com.blackout.app.ui.settings.SettingsScreen
 import com.materialkolor.PaletteStyle
 import dagger.hilt.android.AndroidEntryPoint
 import java.time.LocalDate
@@ -63,12 +68,17 @@ import javax.inject.Inject
 private object AppRoutes {
     const val HOME = "home"
     const val SETTINGS = "settings"
+    const val JOURNAL = "journal"
+    const val FAVORITES = "favorites"
 }
 
 @AndroidEntryPoint
 class MainActivity : AppCompatActivity() {
     @Inject
     lateinit var settingsDataStore: SettingsDataStore
+
+    @Inject
+    lateinit var quotesRepository: QuotesRepository
 
     // Flipped once the first settings snapshot has been read; keeps the splash up until then
     // so users never see the default seed colour / language flash on cold start.
@@ -172,7 +182,11 @@ class MainActivity : AppCompatActivity() {
                 paletteStyle = paletteStyle
             ) {
                 MainNavigation(
-                    activityContext = this@MainActivity
+                    activityContext = this@MainActivity,
+                    settingsDataStore = settingsDataStore,
+                    quotesRepository = quotesRepository,
+                    features = features,
+                    languageCode = ui.language,
                 )
             }
         }
@@ -181,7 +195,11 @@ class MainActivity : AppCompatActivity() {
 
 @Composable
 fun MainNavigation(
-    activityContext: android.content.Context
+    activityContext: android.content.Context,
+    settingsDataStore: SettingsDataStore,
+    quotesRepository: QuotesRepository,
+    features: FeatureToggles,
+    languageCode: String = "en",
 ) {
     val navController = rememberNavController()
 
@@ -196,9 +214,38 @@ fun MainNavigation(
         popExitTransition = { slideOutHorizontally(targetOffsetX = { it }, animationSpec = tween(400)) }
     ) {
         composable(AppRoutes.HOME) {
-            BurnoutApp(
+            BlackoutApp(
                 selectedDestination = selectedDestination,
                 onDestinationSelected = { selectedDestination = it },
+                features = features,
+                quotesRepository = quotesRepository,
+                languageCode = languageCode,
+                onNavigateToSettings = { navController.navigate(AppRoutes.SETTINGS) },
+                onNavigateToJournalEntries = { navController.navigate(AppRoutes.JOURNAL) },
+                onNavigateToFavoriteQuotes = { navController.navigate(AppRoutes.FAVORITES) }
+            )
+        }
+
+        composable(AppRoutes.SETTINGS) {
+            SettingsScreen(
+                settingsDataStore = settingsDataStore,
+                activityContext = activityContext,
+                features = features,
+                onNavigateBack = { navController.popBackStack() }
+            )
+        }
+
+        composable(AppRoutes.JOURNAL) {
+            JournalScreen(
+                onNavigateBack = { navController.popBackStack() }
+            )
+        }
+
+        composable(AppRoutes.FAVORITES) {
+            FavoritesScreen(
+                quotesRepository = quotesRepository,
+                languageCode = languageCode,
+                onNavigateBack = { navController.popBackStack() }
             )
         }
     }
@@ -206,9 +253,15 @@ fun MainNavigation(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun BurnoutApp(
+fun BlackoutApp(
     selectedDestination: AppDestinations,
     onDestinationSelected: (AppDestinations) -> Unit,
+    features: FeatureToggles,
+    quotesRepository: QuotesRepository,
+    languageCode: String = "en",
+    onNavigateToFavoriteQuotes: () -> Unit,
+    onNavigateToJournalEntries: () -> Unit,
+    onNavigateToSettings: () -> Unit,
 ) {
     val scrollBehavior =
         TopAppBarDefaults.exitUntilCollapsedScrollBehavior(rememberTopAppBarState())
@@ -331,16 +384,21 @@ fun BurnoutApp(
             label = "ScreenTransition"
         ) { destination ->
             when (destination) {
-                AppDestinations.TODAY -> TodayScreen(
-
-                )
-
                 AppDestinations.JOURNEY -> JourneyScreen(
 
                 )
 
-                AppDestinations.PROFILE -> ProfileScreen(
+                AppDestinations.TODAY -> TodayScreen(
+                    quotesRepository = quotesRepository,
+                    languageCode = languageCode
+                )
 
+                AppDestinations.PROFILE -> ProfileScreen(
+                    onNavigateToFavoriteQuotes = onNavigateToFavoriteQuotes,
+                    onNavigateToJournalEntries = onNavigateToJournalEntries,
+                    onNavigateToSettings = onNavigateToSettings,
+                    features = features,
+                    bottomPadding = bottomBarPadding,
                 )
             }
         }
@@ -496,8 +554,8 @@ enum class AppDestinations(
     val icon: ImageVector,
     val selectedIcon: ImageVector
 ) {
-    TODAY(null, Icons.Outlined.WbSunny, Icons.Filled.WbSunny),
     JOURNEY(R.string.nav_journey, Icons.Outlined.Map, Icons.Filled.Map),
+    TODAY(null, Icons.Outlined.WbSunny, Icons.Filled.WbSunny),
     PROFILE(R.string.nav_profile, Icons.Outlined.Person, Icons.Filled.Person)
 }
 
