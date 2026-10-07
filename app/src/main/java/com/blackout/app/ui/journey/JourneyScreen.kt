@@ -1,4 +1,4 @@
-package com.blackout.ui.journey
+package com.blackout.app.ui.journey
 
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
