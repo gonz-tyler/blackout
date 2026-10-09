@@ -1,4 +1,6 @@
-package com.blackout.app.data.model
+package com.blackout.app.domain.model
+
+import java.util.Locale
 
 data class Quote(
     val id: String,
@@ -8,7 +10,7 @@ data class Quote(
 ) {
     fun getText(languageCode: String = "en"): String {
         val lang = if (languageCode == "system") {
-            java.util.Locale.getDefault().language // e.g. "en" or "es"
+            Locale.getDefault().language // e.g. "en" or "es"
         } else {
             languageCode
         }

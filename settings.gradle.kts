@@ -25,4 +25,9 @@ dependencyResolutionManagement {
 
 rootProject.name = "Blackout"
 include(":app")
+//include(":designsystem")
+//project(":designsystem").projectDir = java.io.File("../core/designsystem")
+
+include(":designsystem")
+project(":designsystem").projectDir = file("../core/designsystem")
  

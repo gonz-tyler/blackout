@@ -10,13 +10,8 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.compose.animation.*
 import androidx.compose.animation.core.tween
-import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.LocalFireDepartment
 import androidx.compose.material.icons.filled.Map
@@ -29,16 +24,10 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.clipToBounds
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.TransformOrigin
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.PlatformTextStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -55,22 +44,31 @@ import com.blackout.app.ui.favorites.FavoritesScreen
 import com.blackout.app.ui.journal.JournalScreen
 import com.blackout.app.ui.profile.ProfileScreen
 import com.blackout.app.ui.journey.JourneyScreen
+import com.blackout.app.ui.quiz.QuizRoute
 import com.blackout.app.ui.today.TodayScreen
-import com.blackout.app.ui.theme.BlackoutTheme
 import com.blackout.app.ui.settings.SettingsScreen
+import com.core.designsystem.components.CustomCollapsibleTopAppBar
+import com.core.designsystem.components.FloatingBottomNavigationBar
+import com.core.designsystem.components.NavigationItem
+import com.core.designsystem.theme.CoreTheme
 import com.materialkolor.PaletteStyle
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.serialization.Serializable
 import java.time.LocalDate
 import java.time.format.TextStyle
 import java.util.Locale
 import javax.inject.Inject
 
-private object AppRoutes {
-    const val HOME = "home"
-    const val SETTINGS = "settings"
-    const val JOURNAL = "journal"
-    const val FAVORITES = "favorites"
-}
+@Serializable
+data object Home
+@Serializable
+data object Settings
+@Serializable
+data object Journal
+@Serializable
+data object Favorites
+@Serializable
+data object Quiz
 
 @AndroidEntryPoint
 class MainActivity : AppCompatActivity() {
@@ -172,13 +170,10 @@ class MainActivity : AppCompatActivity() {
                 runCatching { PaletteStyle.valueOf(ui.paletteStyle) }.getOrDefault(PaletteStyle.TonalSpot)
             }
 
-            BlackoutTheme(
+            CoreTheme(
                 seedColorInt = ui.seedColor,
-//                seedColorInt = Color.Blue,
                 darkTheme = useDarkTheme,
-//                darkTheme = true,
                 dynamicColor = ui.dynamicColor,
-//                dynamicColor = true, // TODO: Placeholder
                 paletteStyle = paletteStyle
             ) {
                 MainNavigation(
@@ -207,26 +202,27 @@ fun MainNavigation(
 
     NavHost(
         navController = navController,
-        startDestination = AppRoutes.HOME,
+        startDestination = Home,
         enterTransition = { slideInHorizontally(initialOffsetX = { it }, animationSpec = tween(400)) },
         exitTransition = { slideOutHorizontally(targetOffsetX = { -it }, animationSpec = tween(400)) },
         popEnterTransition = { slideInHorizontally(initialOffsetX = { -it }, animationSpec = tween(400)) },
         popExitTransition = { slideOutHorizontally(targetOffsetX = { it }, animationSpec = tween(400)) }
     ) {
-        composable(AppRoutes.HOME) {
+        composable<Home> {
             BlackoutApp(
                 selectedDestination = selectedDestination,
                 onDestinationSelected = { selectedDestination = it },
                 features = features,
                 quotesRepository = quotesRepository,
                 languageCode = languageCode,
-                onNavigateToSettings = { navController.navigate(AppRoutes.SETTINGS) },
-                onNavigateToJournalEntries = { navController.navigate(AppRoutes.JOURNAL) },
-                onNavigateToFavoriteQuotes = { navController.navigate(AppRoutes.FAVORITES) }
+                onNavigateToSettings = { navController.navigate(Settings) },
+                onNavigateToJournalEntries = { navController.navigate(Journal) },
+                onNavigateToFavoriteQuotes = { navController.navigate(Favorites) },
+                onStartQuiz = { navController.navigate(Quiz) { launchSingleTop = true } },
             )
         }
 
-        composable(AppRoutes.SETTINGS) {
+        composable<Settings> {
             SettingsScreen(
                 settingsDataStore = settingsDataStore,
                 activityContext = activityContext,
@@ -235,18 +231,26 @@ fun MainNavigation(
             )
         }
 
-        composable(AppRoutes.JOURNAL) {
+        composable<Journal> {
             JournalScreen(
                 onNavigateBack = { navController.popBackStack() }
             )
         }
 
-        composable(AppRoutes.FAVORITES) {
+        composable<Favorites> {
             FavoritesScreen(
                 quotesRepository = quotesRepository,
                 languageCode = languageCode,
                 onNavigateBack = { navController.popBackStack() }
             )
+        }
+
+        composable<Quiz> {
+            QuizRoute(
+                onFinished = { navController.popBackStack() },
+                onClose = { navController.popBackStack() },
+            )
+
         }
     }
 }
@@ -262,6 +266,7 @@ fun BlackoutApp(
     onNavigateToFavoriteQuotes: () -> Unit,
     onNavigateToJournalEntries: () -> Unit,
     onNavigateToSettings: () -> Unit,
+    onStartQuiz: () -> Unit,
 ) {
     val scrollBehavior =
         TopAppBarDefaults.exitUntilCollapsedScrollBehavior(rememberTopAppBarState())
@@ -317,7 +322,7 @@ fun BlackoutApp(
                                     contentDescription = stringResource(R.string.streak_description),
                                     tint =
 //                                        if (uiState.hasWorkedOutToday) {
-                                            Color(0xFFFFA726),
+                                        Color(0xFFFFA726),
 //                                        }
 //                                        else {
 //                                            MaterialTheme.colorScheme.outline
@@ -331,7 +336,7 @@ fun BlackoutApp(
                                     fontWeight = FontWeight.Bold,
                                     color =
 //                                        if (uiState.hasWorkedOutToday) {
-                                            Color(0xFFFFA726),
+                                        Color(0xFFFFA726),
 //                                        }
 //                                        else {
 //                                            MaterialTheme.colorScheme.outline
@@ -346,7 +351,18 @@ fun BlackoutApp(
             )
         },
         bottomBar = {
+            // The design-system bar is generic, so map our enum into NavigationItems.
+            // getLabel() is @Composable; that's fine inside the inline `map`.
+            val navItems = AppDestinations.entries.map { dest ->
+                NavigationItem(
+                    destination = dest,
+                    icon = dest.icon,
+                    selectedIcon = dest.selectedIcon,
+                    label = dest.getLabel()
+                )
+            }
             FloatingBottomNavigationBar(
+                items = navItems,
                 selectedDestination = selectedDestination,
                 onDestinationSelected = { dest ->
                     if (dest != selectedDestination) {
@@ -379,7 +395,6 @@ fun BlackoutApp(
                     )
                 }
             },
-//            modifier = Modifier.fillMaxSize().padding(innerPadding),//.calculateTopPadding()),
             modifier = Modifier.fillMaxSize().padding(top = innerPadding.calculateTopPadding()),
             label = "ScreenTransition"
         ) { destination ->
@@ -390,7 +405,8 @@ fun BlackoutApp(
 
                 AppDestinations.TODAY -> TodayScreen(
                     quotesRepository = quotesRepository,
-                    languageCode = languageCode
+                    languageCode = languageCode,
+                    onStartQuiz = onStartQuiz,
                 )
 
                 AppDestinations.PROFILE -> ProfileScreen(
@@ -402,150 +418,6 @@ fun BlackoutApp(
                 )
             }
         }
-    }
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun CustomCollapsibleTopAppBar(
-    title: @Composable () -> Unit,
-    actions: @Composable RowScope.() -> Unit,
-    scrollBehavior: TopAppBarScrollBehavior
-) {
-    val density = LocalDensity.current
-    val statusBarHeight = WindowInsets.statusBars.asPaddingValues(density).calculateTopPadding()
-    val expandedHeight = 136.dp + statusBarHeight
-    val maxOffsetPx = with(density) { -72.dp.toPx() }
-
-    SideEffect {
-        if (scrollBehavior.state.heightOffsetLimit != maxOffsetPx) {
-            scrollBehavior.state.heightOffsetLimit = maxOffsetPx
-        }
-    }
-
-    val collapsedFraction = scrollBehavior.state.collapsedFraction
-    val currentHeight = expandedHeight - (72.dp * collapsedFraction)
-    val titleScale = 1f - (0.38f * collapsedFraction)
-
-    Surface(
-        color = MaterialTheme.colorScheme.surface,
-        modifier = Modifier.fillMaxWidth().height(currentHeight)
-    ) {
-        Box(modifier = Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.statusBars)) {
-            Row(
-                modifier = Modifier.align(Alignment.TopEnd).height(64.dp).padding(end = 16.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                actions()
-            }
-            val bottomPadding = (12.dp * (1f - collapsedFraction)) + (4.dp * collapsedFraction)
-            Box(
-                modifier = Modifier
-                    .align(Alignment.BottomStart)
-                    .padding(start = 16.dp, end = 96.dp, bottom = bottomPadding)
-                    .fillMaxWidth()
-                    .height(58.dp)
-                    .graphicsLayer {
-                        scaleX = titleScale
-                        scaleY = titleScale
-                        transformOrigin = TransformOrigin(0f, 0.5f)
-                    }
-                    .clipToBounds(),
-                contentAlignment = Alignment.CenterStart
-            ) {
-                title()
-            }
-        }
-    }
-}
-
-@Composable
-fun FloatingBottomNavigationBar(
-    selectedDestination: AppDestinations,
-    onDestinationSelected: (AppDestinations) -> Unit
-) {
-    val fadeColor = MaterialTheme.colorScheme.surface // match your screen background
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(
-                Brush.verticalGradient(
-                    colorStops = arrayOf(
-                        0f to fadeColor.copy(alpha = 0f),
-//                        0.5f to fadeColor.copy(alpha = 0.85f),
-                        0.5f to fadeColor,
-                        1f to fadeColor
-                    )
-                )
-            )
-            .windowInsetsPadding(WindowInsets.navigationBars)
-            .padding(start = 24.dp, end = 24.dp, top = 72.dp, bottom = 20.dp)
-    ) {
-        Surface(
-            modifier = Modifier.fillMaxWidth().height(64.dp),
-            shape = RoundedCornerShape(36.dp),
-            color = MaterialTheme.colorScheme.surfaceContainerLow,
-            shadowElevation = 12.dp
-        ) {
-            Row(
-                modifier = Modifier.fillMaxSize(),
-                horizontalArrangement = Arrangement.SpaceAround,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                AppDestinations.entries.forEach { dest ->
-                    FloatingNavItem(
-                        icon = dest.icon,
-                        activeIcon = dest.selectedIcon,
-                        label = dest.getLabel(),
-                        isSelected = dest == selectedDestination,
-                        onClick = { onDestinationSelected(dest) }
-                    )
-                }
-            }
-        }
-    }
-}
-
-@Composable
-fun RowScope.FloatingNavItem(
-    icon: ImageVector,
-    activeIcon: ImageVector,
-    label: String,
-    isSelected: Boolean,
-    onClick: () -> Unit
-) {
-    var isAnimating by remember { mutableStateOf(false) }
-    val scale by androidx.compose.animation.core.animateFloatAsState(
-        targetValue = if (isAnimating) 1.2f else 1.0f,
-        animationSpec = tween(durationMillis = 150),
-        finishedListener = { isAnimating = false },
-        label = "NavItemScaleBounce"
-    )
-
-    Box(
-        modifier = Modifier
-            .weight(1f)
-            .fillMaxHeight()
-            .graphicsLayer {
-                scaleX = scale
-                scaleY = scale
-            }
-            .clip(CircleShape)
-            .clickable(
-                interactionSource = remember { MutableInteractionSource() },
-                indication = null
-            ) {
-                isAnimating = true
-                onClick()
-            },
-        contentAlignment = Alignment.Center
-    ) {
-        Icon(
-            imageVector = if (isSelected) activeIcon else icon,
-            contentDescription = label,
-            tint = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.size(28.dp)
-        )
     }
 }
 
@@ -572,10 +444,3 @@ fun AppDestinations.getLabel(): String {
         else -> this.labelRes?.let { stringResource(id = it) }.orEmpty()
     }
 }
-
-//@Composable
-//fun PlaceholderScreen(title: String) {
-//    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-//        Text(text = stringResource(R.string.placeholder_screen_content, title), style = MaterialTheme.typography.titleMedium)
-//    }
-//}

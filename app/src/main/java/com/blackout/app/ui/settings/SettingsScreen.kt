@@ -31,7 +31,7 @@ import com.blackout.app.data.datastore.FeatureToggles
 import com.blackout.app.data.datastore.SettingsDataStore
 import com.blackout.app.R
 import com.blackout.app.domain.notification.WorkManagerScheduler
-import com.blackout.app.ui.components.ModernTimePickerDialog
+import com.core.designsystem.components.ModernTimePickerDialog
 import kotlinx.coroutines.launch
 
 data class ChoiceOption<T>(val value: T, val label: String)

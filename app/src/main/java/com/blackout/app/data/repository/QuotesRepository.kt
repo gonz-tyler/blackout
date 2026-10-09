@@ -2,7 +2,7 @@ package com.blackout.app.data.repository
 
 import android.content.Context
 import com.blackout.app.data.datastore.SettingsDataStore
-import com.blackout.app.data.model.Quote
+import com.blackout.app.domain.model.Quote
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map

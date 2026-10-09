@@ -55,4 +55,20 @@
     <string name="no_quotes_available">No quotes available</string>
     <string name="favorite_quote">Favorite Quote</string>
     <string name="next_quote">Next Quote</string>
+    <string name="q_feel_today">How do you feel today?</string>
+    <string name="q_focus">What is your main focus for today?</string>
+    <string name="q_prepared">Do you feel prepared for the day?</string>
+    <string name="a_prepared">I feel prepared for today</string>
+    <string name="a_not_prepared">I\'m not prepared</string>
+    <string name="btn_next">Next</string>
+    <string name="morning_greeting">Let\'s begin your day</string>
+    <string name="evening_greeting">Let\'s reflect on your day</string>
+    <string name="afternoon_greeting">Let\'s look at your day</string>
+    <string name="morning_subgreeting">And think about how to make it great</string>
+    <string name="evening_subgreeting">And make tomorrow even better</string>
+    <string name="afternoon_subgreeting">And think about how to improve what\'s left</string>
+    <string name="q_rested">How well rested after the night do you feel?</string>
+    <string name="q_motivated">How motivated do you feel?</string>
+    <string name="q_important_task">What is the single most important thing you need to do today?</string>
+    <string name="q_gratitude">List three things you are grateful for.</string>
 </resources>
