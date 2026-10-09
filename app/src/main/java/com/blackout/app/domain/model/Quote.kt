@@ -1,0 +1,19 @@
+package com.blackout.app.domain.model
+
+import java.util.Locale
+
+data class Quote(
+    val id: String,
+    val category: String,
+    val author: String,
+    val text: Map<String, String>
+) {
+    fun getText(languageCode: String = "en"): String {
+        val lang = if (languageCode == "system") {
+            Locale.getDefault().language // e.g. "en" or "es"
+        } else {
+            languageCode
+        }
+        return text[lang] ?: text["en"] ?: text.values.firstOrNull().orEmpty()
+    }
+}
