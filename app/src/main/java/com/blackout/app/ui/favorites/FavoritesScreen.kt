@@ -18,9 +18,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.blackout.app.R
-import com.blackout.app.data.model.Quote
+import com.blackout.app.domain.model.Quote
 import com.blackout.app.data.repository.QuotesRepository
-import com.blackout.app.ui.theme.AppTheme
+import com.core.designsystem.theme.AppTheme
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
