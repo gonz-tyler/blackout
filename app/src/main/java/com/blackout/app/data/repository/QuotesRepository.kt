@@ -5,6 +5,7 @@ import com.blackout.app.data.datastore.SettingsDataStore
 import com.blackout.app.domain.model.Quote
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import org.json.JSONArray
 import javax.inject.Inject
@@ -23,9 +24,15 @@ class QuotesRepository @Inject constructor(
         quotes.filter { it.id in ids }
     }
 
+    val enabledWisdomTraditions: Flow<Set<String>> = settingsDataStore.wisdomTraditions
+
     fun getAllQuotes(): List<Quote> = quotes
 
-    fun getRandomQuote(): Quote? = quotes.randomOrNull()
+    suspend fun getRandomQuote(): Quote? {
+        val enabledTraditions = settingsDataStore.wisdomTraditions.first()
+        val filtered = quotes.filter { it.category.lowercase() in enabledTraditions }
+        return filtered.randomOrNull()
+    }
 
     fun getQuoteById(id: String): Quote? = quotes.find { it.id == id }
 
