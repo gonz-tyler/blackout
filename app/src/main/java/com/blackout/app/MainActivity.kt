@@ -34,13 +34,18 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.core.os.LocaleListCompat
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
+import androidx.navigation.toRoute
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.blackout.app.data.datastore.FeatureToggles
 import com.blackout.app.data.datastore.SettingsDataStore
+import com.blackout.app.data.repository.HabitRepository
 import com.blackout.app.data.repository.QuotesRepository
+import com.blackout.app.data.repository.QuizRepository
+import com.blackout.app.domain.service.StreakCalculator
 import com.blackout.app.ui.favorites.FavoritesScreen
+import com.blackout.app.ui.habit.HabitCreationScreen
 import com.blackout.app.ui.journal.JournalScreen
 import com.blackout.app.ui.profile.ProfileScreen
 import com.blackout.app.ui.journey.JourneyScreen
@@ -69,6 +74,8 @@ data object Journal
 data object Favorites
 @Serializable
 data object Quiz
+@Serializable
+data class HabitCreation(val habitId: String? = null)
 
 @AndroidEntryPoint
 class MainActivity : AppCompatActivity() {
@@ -77,6 +84,12 @@ class MainActivity : AppCompatActivity() {
 
     @Inject
     lateinit var quotesRepository: QuotesRepository
+
+    @Inject
+    lateinit var quizRepository: QuizRepository
+
+    @Inject
+    lateinit var habitRepository: HabitRepository
 
     // Flipped once the first settings snapshot has been read; keeps the splash up until then
     // so users never see the default seed colour / language flash on cold start.
@@ -180,6 +193,8 @@ class MainActivity : AppCompatActivity() {
                     activityContext = this@MainActivity,
                     settingsDataStore = settingsDataStore,
                     quotesRepository = quotesRepository,
+                    quizRepository = quizRepository,
+                    habitRepository = habitRepository,
                     features = features,
                     languageCode = ui.language,
                 )
@@ -193,6 +208,8 @@ fun MainNavigation(
     activityContext: android.content.Context,
     settingsDataStore: SettingsDataStore,
     quotesRepository: QuotesRepository,
+    quizRepository: QuizRepository,
+    habitRepository: HabitRepository,
     features: FeatureToggles,
     languageCode: String = "en",
 ) {
@@ -214,11 +231,14 @@ fun MainNavigation(
                 onDestinationSelected = { selectedDestination = it },
                 features = features,
                 quotesRepository = quotesRepository,
+                quizRepository = quizRepository,
+                habitRepository = habitRepository,
                 languageCode = languageCode,
                 onNavigateToSettings = { navController.navigate(Settings) },
                 onNavigateToJournalEntries = { navController.navigate(Journal) },
                 onNavigateToFavoriteQuotes = { navController.navigate(Favorites) },
                 onStartQuiz = { navController.navigate(Quiz) { launchSingleTop = true } },
+                onNavigateToHabitCreation = { habitId -> navController.navigate(HabitCreation(habitId)) },
             )
         }
 
@@ -250,7 +270,14 @@ fun MainNavigation(
                 onFinished = { navController.popBackStack() },
                 onClose = { navController.popBackStack() },
             )
+        }
 
+        composable<HabitCreation> { entry ->
+            val route = entry.toRoute<HabitCreation>()
+            HabitCreationScreen(
+                habitId = route.habitId,
+                onNavigateBack = { navController.popBackStack() }
+            )
         }
     }
 }
@@ -262,12 +289,18 @@ fun BlackoutApp(
     onDestinationSelected: (AppDestinations) -> Unit,
     features: FeatureToggles,
     quotesRepository: QuotesRepository,
+    quizRepository: QuizRepository,
+    habitRepository: HabitRepository,
     languageCode: String = "en",
     onNavigateToFavoriteQuotes: () -> Unit,
     onNavigateToJournalEntries: () -> Unit,
     onNavigateToSettings: () -> Unit,
     onStartQuiz: () -> Unit,
+    onNavigateToHabitCreation: (String?) -> Unit,
 ) {
+    val habits by habitRepository.observeHabits().collectAsState(initial = emptyList())
+    val streakCount = remember(habits) { StreakCalculator.calculateStreak(habits) }
+
     val scrollBehavior =
         TopAppBarDefaults.exitUntilCollapsedScrollBehavior(rememberTopAppBarState())
 
@@ -320,27 +353,14 @@ fun BlackoutApp(
                                 Icon(
                                     imageVector = Icons.Filled.LocalFireDepartment,
                                     contentDescription = stringResource(R.string.streak_description),
-                                    tint =
-//                                        if (uiState.hasWorkedOutToday) {
-                                        Color(0xFFFFA726),
-//                                        }
-//                                        else {
-//                                            MaterialTheme.colorScheme.outline
-//                                        },
+                                    tint = Color(0xFFFFA726),
                                     modifier = Modifier.size(28.dp)
                                 )
                                 Spacer(modifier = Modifier.width(4.dp))
                                 Text(
-//                                    text = uiState.currentStreak.toString(),
-                                    text = "3", // TODO: PLACEHOLDER
+                                    text = streakCount.toString(),
                                     fontWeight = FontWeight.Bold,
-                                    color =
-//                                        if (uiState.hasWorkedOutToday) {
-                                        Color(0xFFFFA726),
-//                                        }
-//                                        else {
-//                                            MaterialTheme.colorScheme.outline
-//                                        },
+                                    color = Color(0xFFFFA726),
                                 )
                                 Spacer(modifier = Modifier.width(12.dp))
                             }
@@ -351,8 +371,6 @@ fun BlackoutApp(
             )
         },
         bottomBar = {
-            // The design-system bar is generic, so map our enum into NavigationItems.
-            // getLabel() is @Composable; that's fine inside the inline `map`.
             val navItems = AppDestinations.entries.map { dest ->
                 NavigationItem(
                     destination = dest,
@@ -400,16 +418,20 @@ fun BlackoutApp(
         ) { destination ->
             when (destination) {
                 AppDestinations.JOURNEY -> JourneyScreen(
-
+                    onNavigateToHabitCreation = onNavigateToHabitCreation,
+                    bottomPadding = bottomBarPadding,
                 )
 
                 AppDestinations.TODAY -> TodayScreen(
                     quotesRepository = quotesRepository,
+                    quizRepository = quizRepository,
+                    habitRepository = habitRepository,
                     languageCode = languageCode,
                     onStartQuiz = onStartQuiz,
                 )
 
                 AppDestinations.PROFILE -> ProfileScreen(
+                    habitRepository = habitRepository,
                     onNavigateToFavoriteQuotes = onNavigateToFavoriteQuotes,
                     onNavigateToJournalEntries = onNavigateToJournalEntries,
                     onNavigateToSettings = onNavigateToSettings,
