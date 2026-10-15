@@ -125,4 +125,7 @@
     <string name="habit_not_scheduled_today">This habit is not scheduled for today.</string>
     <string name="today">Today</string>
     <string name="tomorrow">Tomorrow</string>
+    <string name="live_today_intention">Live today with intention.</string>
+    <string name="year_progress">Year Progress %1$s</string>
+    <string name="days_passed">%1$d / %2$d days passed (%3$.1f%%)</string>
 </resources>

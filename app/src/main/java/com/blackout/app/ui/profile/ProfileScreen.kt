@@ -26,6 +26,7 @@ import com.blackout.app.R
 import com.blackout.app.data.datastore.FeatureToggles
 import com.blackout.app.data.repository.HabitRepository
 import com.blackout.app.domain.service.StreakCalculator
+import com.core.designsystem.components.AnimatedLinearProgressIndicator
 import java.time.LocalDate
 import java.time.Year
 
@@ -122,10 +123,7 @@ fun ProfileScreen(
                 val now = remember { LocalDate.now() }
                 val dayOfYear = now.dayOfYear
                 val totalDaysInYear = remember(now) { Year.of(now.year).length() }
-                val progressRatio = dayOfYear.toFloat() / totalDaysInYear
-                val percentageFormatted = remember(progressRatio) {
-                    "%.1f".format(progressRatio * 100)
-                }
+                val percentage = (dayOfYear.toFloat() / totalDaysInYear) * 100
 
                 Card(
                     modifier = Modifier.fillMaxWidth(),
@@ -154,12 +152,12 @@ fun ProfileScreen(
                                 Spacer(Modifier.width(12.dp))
                                 Column {
                                     Text(
-                                        text = "Year Progress ${now.year}",
+                                        text = stringResource(R.string.year_progress, now.year),
                                         style = MaterialTheme.typography.titleMedium,
                                         fontWeight = FontWeight.Bold
                                     )
                                     Text(
-                                        text = "$dayOfYear / $totalDaysInYear days passed ($percentageFormatted%)",
+                                        text = stringResource(R.string.days_passed, dayOfYear, totalDaysInYear, percentage),
                                         style = MaterialTheme.typography.bodySmall,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant
                                     )
@@ -167,8 +165,8 @@ fun ProfileScreen(
                             }
                         }
                         Spacer(Modifier.height(16.dp))
-                        LinearProgressIndicator(
-                            progress = { progressRatio },
+                        AnimatedLinearProgressIndicator(
+                            progress = { percentage/100 },
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .height(8.dp)
@@ -178,51 +176,12 @@ fun ProfileScreen(
                         )
                         Spacer(Modifier.height(8.dp))
                         Text(
-                            text = "Live today with intention.",
+                            text = stringResource(R.string.live_today_intention),
                             style = MaterialTheme.typography.labelMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                 }
-            }
-        }
-
-        item {
-            // Milestones & Achievements
-            Text(
-                text = "Milestones & Achievements",
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Bold
-            )
-            Spacer(Modifier.height(12.dp))
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                MilestoneBadge(
-                    modifier = Modifier.weight(1f),
-                    title = "First Goal",
-                    subtitle = "Complete 1 habit",
-                    icon = Icons.Rounded.EmojiEvents,
-                    iconColor = Color(0xFFFFCA28),
-                    isUnlocked = totalCompletions >= 1
-                )
-                MilestoneBadge(
-                    modifier = Modifier.weight(1f),
-                    title = "Streak Master",
-                    subtitle = "$streakCount-day streak",
-                    icon = Icons.Rounded.LocalFireDepartment,
-                    iconColor = Color(0xFFFF7043),
-                    isUnlocked = streakCount >= 7
-                )
-                MilestoneBadge(
-                    modifier = Modifier.weight(1f),
-                    title = "30+ Done",
-                    subtitle = "30 completions",
-                    icon = Icons.Rounded.Star,
-                    iconColor = Color(0xFFAB47BC),
-                    isUnlocked = totalCompletions >= 30
-                )
             }
         }
 
