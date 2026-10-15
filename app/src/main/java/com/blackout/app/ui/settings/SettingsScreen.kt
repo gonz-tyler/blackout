@@ -24,12 +24,14 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.os.LocaleListCompat
 import com.blackout.app.data.datastore.FeatureToggles
 import com.blackout.app.data.datastore.SettingsDataStore
 import com.blackout.app.R
+import com.blackout.app.data.datastore.DEFAULT_WISDOM_TRADITIONS
 import com.blackout.app.domain.notification.WorkManagerScheduler
 import com.core.designsystem.components.ModernTimePickerDialog
 import kotlinx.coroutines.launch
@@ -50,6 +52,8 @@ fun SettingsScreen(
 
     val themeMode by settingsDataStore.themeMode.collectAsState(initial = "system")
     val streakEnabled by settingsDataStore.streakEnabled.collectAsState(initial = true)
+    val yearProgressEnabled by settingsDataStore.yearProgressEnabled.collectAsState(initial = true)
+    val wisdomTraditions by settingsDataStore.wisdomTraditions.collectAsState(initial = DEFAULT_WISDOM_TRADITIONS)
     val language by settingsDataStore.language.collectAsState(initial = "en")
     val seedColorInt by settingsDataStore.seedColor.collectAsState(initial = 0xFFC9A24B.toInt())
     val reminderTime by settingsDataStore.reminderTime.collectAsState(initial = "09:00")
@@ -80,7 +84,7 @@ fun SettingsScreen(
             verticalArrangement = Arrangement.spacedBy(24.dp)
         ) {
 
-            // --- Language & Preferences -
+            // --- Language & Preferences ---
             item {
                 SettingsSection(
                     title = stringResource(R.string.language),
@@ -197,6 +201,63 @@ fun SettingsScreen(
                 }
             }
 
+            // --- Wisdom Traditions ---
+            item {
+                SettingsSection(
+                    title = stringResource(R.string.wisdom_traditions),
+                    icon = Icons.Rounded.AutoAwesome
+                ) {
+                    SettingsContainer {
+                        Column {
+                            ToggleOption(
+                                title = stringResource(R.string.stoicism),
+                                subtitle = stringResource(R.string.stoicism_description),
+                                checked = wisdomTraditions.contains("stoic"),
+                                onCheckedChange = { checked ->
+                                    coroutineScope.launch { settingsDataStore.toggleWisdomTradition("stoic", checked) }
+                                }
+                            )
+                            HorizontalDivider()
+                            ToggleOption(
+                                title = stringResource(R.string.buddhism),
+                                subtitle = stringResource(R.string.buddhism_description),
+                                checked = wisdomTraditions.contains("buddhist"),
+                                onCheckedChange = { checked ->
+                                    coroutineScope.launch { settingsDataStore.toggleWisdomTradition("buddhist", checked) }
+                                }
+                            )
+                            HorizontalDivider()
+                            ToggleOption(
+                                title = stringResource(R.string.biblical),
+                                subtitle = stringResource(R.string.biblical_description),
+                                checked = wisdomTraditions.contains("biblical"),
+                                onCheckedChange = { checked ->
+                                    coroutineScope.launch { settingsDataStore.toggleWisdomTradition("biblical", checked) }
+                                }
+                            )
+                            HorizontalDivider()
+                            ToggleOption(
+                                title = stringResource(R.string.taosim),
+                                subtitle = stringResource(R.string.taoism_description),
+                                checked = wisdomTraditions.contains("taoist"),
+                                onCheckedChange = { checked ->
+                                    coroutineScope.launch { settingsDataStore.toggleWisdomTradition("taoist", checked) }
+                                }
+                            )
+                            HorizontalDivider()
+                            ToggleOption(
+                                title = stringResource(R.string.modern),
+                                subtitle = stringResource(R.string.modern_description),
+                                checked = wisdomTraditions.contains("modern"),
+                                onCheckedChange = { checked ->
+                                    coroutineScope.launch { settingsDataStore.toggleWisdomTradition("modern", checked) }
+                                }
+                            )
+                        }
+                    }
+                }
+            }
+
             // --- Features & Modules ---
             item {
                 SettingsSection(
@@ -210,6 +271,13 @@ fun SettingsScreen(
                                 subtitle = stringResource(R.string.streak_description),
                                 checked = streakEnabled,
                                 onCheckedChange = { coroutineScope.launch { settingsDataStore.setStreakEnabled(it) } }
+                            )
+                            HorizontalDivider()
+                            ToggleOption(
+                                title = stringResource(R.string.year_progress_card_setting),
+                                subtitle = stringResource(R.string.year_progress_card_setting_description),
+                                checked = yearProgressEnabled,
+                                onCheckedChange = { coroutineScope.launch { settingsDataStore.setYearProgressEnabled(it) } }
                             )
                         }
                     }
@@ -298,7 +366,6 @@ fun SettingsScreen(
                     }
                 }
             }
-
             // --- Destructive Action ---
             item {
                 Surface(
@@ -317,6 +384,117 @@ fun SettingsScreen(
                     )
                 }
                 Spacer(Modifier.height(64.dp))
+            }
+
+            // --- Support Creator ---
+            item {
+                SettingsSection(
+                    title = stringResource(R.string.support_creator),
+                    icon = Icons.Rounded.Favorite
+                ) {
+                    SettingsContainer {
+                        Column(
+                            modifier = Modifier.padding(20.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            Icon(
+                                imageVector = Icons.Rounded.Favorite,
+                                tint = MaterialTheme.colorScheme.error,
+                                modifier = Modifier.size(32.dp),
+                                contentDescription = null
+                            )
+                            Spacer(Modifier.height(12.dp))
+                            Text(
+                                text = stringResource(R.string.enjoying_app),
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Spacer(Modifier.height(8.dp))
+                            Text(
+                                text = stringResource(R.string.support_message),
+                                textAlign = TextAlign.Center,
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            Spacer(Modifier.height(16.dp))
+                            Row(modifier = Modifier.fillMaxWidth()) {
+                                OutlinedButton(
+                                    onClick = { /* TODO: Rate App */ },
+                                    modifier = Modifier.weight(1f),
+                                    shape = RoundedCornerShape(12.dp)
+                                ) {
+                                    Icon(Icons.Rounded.Star, contentDescription = null)
+                                    Spacer(Modifier.width(8.dp))
+                                    Text(stringResource(R.string.rate_app))
+                                }
+                                Spacer(Modifier.width(12.dp))
+                                Button(
+                                    onClick = { /* TODO: Buy Coffee */ },
+                                    modifier = Modifier.weight(1f),
+                                    shape = RoundedCornerShape(12.dp),
+                                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondaryContainer, contentColor = MaterialTheme.colorScheme.onSecondaryContainer)
+                                ) {
+                                    Icon(Icons.Rounded.Coffee, contentDescription = null)
+                                    Spacer(Modifier.width(8.dp))
+                                    Text(stringResource(R.string.buy_coffee))
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            item {
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            text = stringResource(R.string.made_with_love),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Spacer(Modifier.width(4.dp))
+                        Icon(
+                            imageVector = Icons.Rounded.Favorite,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.size(16.dp)
+                        )
+                    }
+                    Spacer(Modifier.height(24.dp))
+                    // App Info
+                    Surface(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(16.dp),
+                        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(16.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                imageVector = Icons.Rounded.Info,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            Spacer(Modifier.width(12.dp))
+                            Column {
+                                Text(
+                                    text = "Blackout v1.0.0",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    fontWeight = FontWeight.Medium
+                                )
+                                Text(
+                                    text = stringResource(R.string.app_description),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+                    }
+                    Spacer(Modifier.height(100.dp))
+                }
             }
         }
     }

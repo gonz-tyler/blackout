@@ -26,36 +26,27 @@ import javax.inject.Singleton
 
 private val Context.dataStore by preferencesDataStore(name = "settings")
 
-/**
- * Everything MainActivity needs before it can draw the first frame, read atomically from a
- * single snapshot. distinctUntilChanged() below means unrelated writes (e.g. streak updates)
- * don't re-emit this and don't recompose the root.
- */
 data class UiSettings(
     val seedColor: Int,
     val themeMode: String,       // "light" | "dark" | "system"
     val dynamicColor: Boolean,
     val paletteStyle: String,    // PaletteStyle.name, parsed in the UI layer
     val language: String,
+)
 
-    )
-
-/** Per-feature switches. Each defaults to the style's preset until the user changes it. */
+/** Per-feature switches. */
 data class FeatureToggles(
     val streak: Boolean,
-) {
-}
+    val yearProgress: Boolean,
+)
 
-// Replaces ThemeSettingsProvider, LanguageProvider, GenderSettingsProvider,
-// UnitSettingsProvider, and the seed-color part of your Appainter setup.
-// These are key-value prefs, not relational data, so DataStore is the right
-// fit rather than another Room table — same role Hive's misc boxes played.
+val DEFAULT_WISDOM_TRADITIONS = setOf("stoic", "buddhist", "biblical", "taoist", "modern")
+
 @Singleton
 class SettingsDataStore @Inject constructor(
     @ApplicationContext private val context: Context
 ) {
     companion object {
-        // 0xFFC9A24B = the warm antique-gold default from app_theme.dart
         const val DEFAULT_SEED = 0xFFC9A24B.toInt()
         const val DEFAULT_PALETTE_STYLE = "TonalSpot"
         const val LANGUAGE_SYSTEM = "system"
@@ -63,21 +54,13 @@ class SettingsDataStore @Inject constructor(
 
     private object Keys {
         val SEED_COLOR = intPreferencesKey("seed_color_argb")
-        val THEME_MODE = stringPreferencesKey("theme_mode") // "light" | "dark" | "system"
+        val THEME_MODE = stringPreferencesKey("theme_mode")
         val DYNAMIC_COLOR = booleanPreferencesKey("dynamic_color")
-        val PALETTE_STYLE = stringPreferencesKey("palette_style") // PaletteStyle.name
-        val UNIT_SYSTEM = stringPreferencesKey("unit_system") // "metric" | "imperial"
-        val GODS = stringPreferencesKey("gods_option")
+        val PALETTE_STYLE = stringPreferencesKey("palette_style")
         val LANGUAGE = stringPreferencesKey("language_code")
-        val GENDER = stringPreferencesKey("gender") // LEGACY: read-only, only used to migrate
-        val SEX = stringPreferencesKey("sex")       // Sex.name
-        val STYLE = stringPreferencesKey("style")   // Style.name
         val FEATURE_STREAK = booleanPreferencesKey("feature_streak")
-        val FEATURE_LABORS = booleanPreferencesKey("feature_labors")
-        val FEATURE_IDEALS = booleanPreferencesKey("feature_ideals")
-        val FEATURE_GOALS = booleanPreferencesKey("feature_goals")
-        val FEATURE_GODS = booleanPreferencesKey("feature_gods")
-        val WEEKLY_GOAL = intPreferencesKey("weekly_goal")
+        val FEATURE_YEAR_PROGRESS = booleanPreferencesKey("feature_year_progress")
+        val WISDOM_TRADITIONS = stringSetPreferencesKey("wisdom_traditions")
         val REMINDER_TIME = stringPreferencesKey("reminder_time")
         val NOTIFICATIONS_ENABLED = booleanPreferencesKey("notifications_enabled")
 
@@ -85,8 +68,6 @@ class SettingsDataStore @Inject constructor(
         val FAVORITE_QUOTES = stringSetPreferencesKey("favorite_quote_ids")
     }
 
-    // One shared upstream: an unreadable/corrupt file falls back to defaults instead of
-    // crashing every collector.
     private val prefs: Flow<Preferences> = context.dataStore.data.catch {
         if (it is IOException) emit(emptyPreferences()) else throw it
     }
@@ -101,21 +82,24 @@ class SettingsDataStore @Inject constructor(
         )
     }.distinctUntilChanged()
 
-
     private fun Preferences.streakOn(): Boolean = this[Keys.FEATURE_STREAK] ?: true
+    private fun Preferences.yearProgressOn(): Boolean = this[Keys.FEATURE_YEAR_PROGRESS] ?: true
 
     private fun Preferences.effectiveSeed(): Int =
         this[Keys.SEED_COLOR] ?: 0xFFC9A24B.toInt()
 
-
-
-
     val streakEnabled: Flow<Boolean> = prefs.map { it.streakOn() }.distinctUntilChanged()
+    val yearProgressEnabled: Flow<Boolean> = prefs.map { it.yearProgressOn() }.distinctUntilChanged()
 
+    val wisdomTraditions: Flow<Set<String>> = prefs.map {
+        it[Keys.WISDOM_TRADITIONS] ?: DEFAULT_WISDOM_TRADITIONS
+    }.distinctUntilChanged()
 
-    /** All three together, for code that gates several features at once. */
     val features: Flow<FeatureToggles> = prefs.map {
-        FeatureToggles(streak = it.streakOn())
+        FeatureToggles(
+            streak = it.streakOn(),
+            yearProgress = it.yearProgressOn()
+        )
     }.distinctUntilChanged()
 
     val seedColor: Flow<Int> = prefs.map { it.effectiveSeed() }
@@ -123,11 +107,6 @@ class SettingsDataStore @Inject constructor(
     val dynamicColor: Flow<Boolean> = prefs.map { it[Keys.DYNAMIC_COLOR] ?: false }
     val paletteStyle: Flow<String> = prefs.map { it[Keys.PALETTE_STYLE] ?: DEFAULT_PALETTE_STYLE }
     val language: Flow<String> = prefs.map { it[Keys.LANGUAGE] ?: LANGUAGE_SYSTEM }
-    /**
-     * Bridge for code that still reads the old string. Migrate those call sites to sex/style
-     * (e.g. `gender != "female_soft"` -> `style == Style.HARD`) and then delete this.
-     * Note MALE+SOFT has no legacy equivalent and maps to "male".
-     */
 
     val reminderTime: Flow<String> = prefs.map { it[Keys.REMINDER_TIME] ?: "09:00" }
     val notificationsEnabled: Flow<Boolean> = prefs.map { it[Keys.NOTIFICATIONS_ENABLED] ?: true }
@@ -144,8 +123,15 @@ class SettingsDataStore @Inject constructor(
     suspend fun setLanguage(code: String) { context.dataStore.edit { it[Keys.LANGUAGE] = code } }
 
     suspend fun setStreakEnabled(enabled: Boolean) { context.dataStore.edit { it[Keys.FEATURE_STREAK] = enabled } }
+    suspend fun setYearProgressEnabled(enabled: Boolean) { context.dataStore.edit { it[Keys.FEATURE_YEAR_PROGRESS] = enabled } }
 
-    /** Back to "follow the persona's default colour". */
+    suspend fun toggleWisdomTradition(tradition: String, enabled: Boolean) {
+        context.dataStore.edit { prefs ->
+            val current = prefs[Keys.WISDOM_TRADITIONS] ?: DEFAULT_WISDOM_TRADITIONS
+            prefs[Keys.WISDOM_TRADITIONS] = if (enabled) current + tradition else current - tradition
+        }
+    }
+
     suspend fun clearSeedColor() { context.dataStore.edit { it.remove(Keys.SEED_COLOR) } }
     suspend fun setReminderTime(time: String) { context.dataStore.edit { it[Keys.REMINDER_TIME] = time } }
     suspend fun setNotificationsEnabled(enabled: Boolean) { context.dataStore.edit { it[Keys.NOTIFICATIONS_ENABLED] = enabled } }
@@ -163,7 +149,6 @@ class SettingsDataStore @Inject constructor(
             prefs[Keys.STREAK_STATE] = StreakStateJson.encode(transform(current))
         }
     }
-
 
     object StreakStateJson {
         fun encode(s: StreakState): String = JSONObject().apply {
