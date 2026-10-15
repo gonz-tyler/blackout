@@ -14,6 +14,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -26,6 +27,7 @@ import com.blackout.app.ui.habit.components.HabitRepetitionDialog
 import com.blackout.app.ui.habit.components.HabitStreakHeatmap
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
+import com.blackout.app.R
 
 @Composable
 fun JourneyScreen(
@@ -59,7 +61,17 @@ fun JourneyScreen(
                     selectedDay = selectedDay,
                     onDaySelected = { date -> selectedDay = date }
                 )
+                Button(
+                    onClick = {
+                        onNavigateToHabitCreation(null)
+                    },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Icon(Icons.Default.Add, contentDescription = stringResource(R.string.add_habit))
+                    Text(stringResource(R.string.add_habit))
+                }
             }
+
 
             if (habits.isEmpty()) {
                 item {
@@ -70,7 +82,7 @@ fun JourneyScreen(
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
-                            text = "No habits yet. Tap + to add one!",
+                            text = stringResource(R.string.no_habits),
                             style = MaterialTheme.typography.bodyLarge,
                             color = MaterialTheme.colorScheme.outline
                         )
@@ -87,17 +99,6 @@ fun JourneyScreen(
                     )
                 }
             }
-        }
-
-        FloatingActionButton(
-            onClick = {
-                onNavigateToHabitCreation(null)
-            },
-            modifier = Modifier
-                .align(Alignment.BottomEnd)
-                .padding(end = 24.dp, bottom = 24.dp + bottomPadding)
-        ) {
-            Icon(Icons.Default.Add, contentDescription = "Add Habit")
         }
 
         selectedHabitForModal?.let { habit ->
@@ -206,7 +207,7 @@ fun HabitStreakCard(
                         )
                         habit.getNextDueDate()?.let { nextDue ->
                             Text(
-                                text = "Next due: ${formatDueDate(nextDue)}",
+                                text = stringResource(R.string.next_due_on, formatDueDate(nextDue)),
                                 style = MaterialTheme.typography.labelSmall,
                                 color = MaterialTheme.colorScheme.secondary
                             )
@@ -270,13 +271,13 @@ fun HabitDetailsBottomSheet(
                     modifier = Modifier.weight(1f)
                 )
                 IconButton(onClick = onEdit) {
-                    Icon(Icons.Default.Edit, contentDescription = "Edit")
+                    Icon(Icons.Default.Edit, contentDescription = stringResource(R.string.edit))
                 }
                 IconButton(onClick = onDelete) {
-                    Icon(Icons.Default.Delete, contentDescription = "Delete", tint = MaterialTheme.colorScheme.error)
+                    Icon(Icons.Default.Delete, contentDescription = stringResource(R.string.delete), tint = MaterialTheme.colorScheme.error)
                 }
                 IconButton(onClick = onOpenCalendar) {
-                    Icon(Icons.Default.CalendarMonth, contentDescription = "Calendar")
+                    Icon(Icons.Default.CalendarMonth, contentDescription = stringResource(R.string.calendar))
                 }
             }
 
@@ -304,14 +305,14 @@ fun HabitDetailsBottomSheet(
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
-                        text = if (isTodayCompleted) "Completed Today ($completionsToday/${habit.timesPerDay})" else "Complete Today ($completionsToday/${habit.timesPerDay})",
+                        text = if (isTodayCompleted) stringResource(R.string.completed_today, completionsToday, habit.timesPerDay) else stringResource(R.string.complete_today, completionsToday, habit.timesPerDay),
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold
                     )
                 }
             } else {
                 Text(
-                    text = "This habit is not scheduled for today.",
+                    text = stringResource(R.string.habit_not_scheduled_today),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.outline
                 )
@@ -325,10 +326,10 @@ fun HabitDetailsBottomSheet(
 fun formatDueDate(date: LocalDate): String {
     val today = LocalDate.now()
     return when (date) {
-        today -> "Today"
-        today.plusDays(1) -> "Tomorrow"
+        today -> R.string.today
+        today.plusDays(1) -> R.string.tomorrow
         else -> date.format(DateTimeFormatter.ofPattern("MMM d"))
-    }
+    } as String
 }
 
 fun getHabitIcon(iconName: String): ImageVector {

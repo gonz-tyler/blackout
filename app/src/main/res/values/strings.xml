@@ -114,4 +114,15 @@
     <string name="taoism_description">Quotes from Lao Tzu, Zhuangzi, and the Dao De Jing</string>
     <string name="modern">Modern Wisdom</string>
     <string name="modern_description">Inspirational quotes from modern thinkers</string>
+    <string name="add_habit">Add Habit</string>
+    <string name="no_habits">No habits yet.</string>
+    <string name="next_due_on">Next due: %1$s</string>
+    <string name="edit">Edit</string>
+    <string name="delete">Delete</string>
+    <string name="calendar">Calendar</string>
+    <string name="completed_today">Completed Today (%1$d/%2$d)</string>
+    <string name="complete_today">Complete Today (%1$d/%2$d)</string>
+    <string name="habit_not_scheduled_today">This habit is not scheduled for today.</string>
+    <string name="today">Today</string>
+    <string name="tomorrow">Tomorrow</string>
 </resources>
