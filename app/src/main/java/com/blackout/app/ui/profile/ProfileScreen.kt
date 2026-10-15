@@ -11,11 +11,10 @@ import androidx.compose.material.icons.automirrored.rounded.ListAlt
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.rounded.*
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
@@ -23,18 +22,26 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import com.blackout.app.data.datastore.FeatureToggles
 import com.blackout.app.R
+import com.blackout.app.data.datastore.FeatureToggles
+import com.blackout.app.data.repository.HabitRepository
+import com.blackout.app.domain.service.StreakCalculator
+import java.time.LocalDate
+import java.time.Year
 
 @Composable
 fun ProfileScreen(
+    habitRepository: HabitRepository,
     onNavigateToFavoriteQuotes: () -> Unit,
     onNavigateToJournalEntries: () -> Unit,
     onNavigateToSettings: () -> Unit,
     features: FeatureToggles,
     bottomPadding: Dp = 0.dp,
 ) {
+    val habits by habitRepository.observeHabits().collectAsState(initial = emptyList())
+    val streakCount = remember(habits) { StreakCalculator.calculateStreak(habits) }
+    val totalCompletions = remember(habits) { StreakCalculator.calculateTotalCompletions(habits) }
+    val dueToday = remember(habits) { StreakCalculator.calculateDueTodayCompletions(habits) }
 
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
@@ -90,26 +97,132 @@ fun ProfileScreen(
                         StatItem(
                             modifier = Modifier.weight(1f),
                             label = stringResource(R.string.total_habits),
-//                            value = uiState.routines.size.toString(), TODO
-                            value = "3",
+                            value = habits.size.toString(),
                             icon = Icons.AutoMirrored.Rounded.ListAlt
                         )
                         StatItem(
                             modifier = Modifier.weight(1f),
                             label = stringResource(R.string.completed_due_today),
-//                            value = "${uiState.completedLaborCount}/${LaborsService.TOTAL_LABOR_COUNT}", TODO
-                            value = "1/2",
+                            value = "${dueToday.first}/${dueToday.second}",
                             icon = Icons.Rounded.CalendarToday
                         )
                         StatItem(
                             modifier = Modifier.weight(1f),
                             label = stringResource(R.string.total_completions),
-//                            value = uiState.workoutSessions.size.toString(), TODO
-                            value = "32",
+                            value = totalCompletions.toString(),
                             icon = Icons.Rounded.CheckCircle
                         )
                     }
                 }
+            }
+        }
+
+        if (features.yearProgress) {
+            item {
+                val now = remember { LocalDate.now() }
+                val dayOfYear = now.dayOfYear
+                val totalDaysInYear = remember(now) { Year.of(now.year).length() }
+                val progressRatio = dayOfYear.toFloat() / totalDaysInYear
+                val percentageFormatted = remember(progressRatio) {
+                    "%.1f".format(progressRatio * 100)
+                }
+
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(28.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+                ) {
+                    Column(modifier = Modifier.padding(20.dp)) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(40.dp)
+                                        .background(MaterialTheme.colorScheme.secondaryContainer, CircleShape),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Rounded.HourglassBottom,
+                                        contentDescription = null,
+                                        tint = MaterialTheme.colorScheme.onSecondaryContainer
+                                    )
+                                }
+                                Spacer(Modifier.width(12.dp))
+                                Column {
+                                    Text(
+                                        text = "Year Progress ${now.year}",
+                                        style = MaterialTheme.typography.titleMedium,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                    Text(
+                                        text = "$dayOfYear / $totalDaysInYear days passed ($percentageFormatted%)",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                            }
+                        }
+                        Spacer(Modifier.height(16.dp))
+                        LinearProgressIndicator(
+                            progress = { progressRatio },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(8.dp)
+                                .clip(RoundedCornerShape(4.dp)),
+                            color = MaterialTheme.colorScheme.primary,
+                            trackColor = MaterialTheme.colorScheme.surfaceContainerHigh
+                        )
+                        Spacer(Modifier.height(8.dp))
+                        Text(
+                            text = "Live today with intention.",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+            }
+        }
+
+        item {
+            // Milestones & Achievements
+            Text(
+                text = "Milestones & Achievements",
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold
+            )
+            Spacer(Modifier.height(12.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                MilestoneBadge(
+                    modifier = Modifier.weight(1f),
+                    title = "First Goal",
+                    subtitle = "Complete 1 habit",
+                    icon = Icons.Rounded.EmojiEvents,
+                    iconColor = Color(0xFFFFCA28),
+                    isUnlocked = totalCompletions >= 1
+                )
+                MilestoneBadge(
+                    modifier = Modifier.weight(1f),
+                    title = "Streak Master",
+                    subtitle = "$streakCount-day streak",
+                    icon = Icons.Rounded.LocalFireDepartment,
+                    iconColor = Color(0xFFFF7043),
+                    isUnlocked = streakCount >= 7
+                )
+                MilestoneBadge(
+                    modifier = Modifier.weight(1f),
+                    title = "30+ Done",
+                    subtitle = "30 completions",
+                    icon = Icons.Rounded.Star,
+                    iconColor = Color(0xFFAB47BC),
+                    isUnlocked = totalCompletions >= 30
+                )
             }
         }
 
@@ -145,122 +258,58 @@ fun ProfileScreen(
                 )
             }
         }
+    }
+}
 
-        item {
-            // Support Section
+@Composable
+private fun MilestoneBadge(
+    modifier: Modifier = Modifier,
+    title: String,
+    subtitle: String,
+    icon: ImageVector,
+    iconColor: Color,
+    isUnlocked: Boolean = true
+) {
+    Card(
+        modifier = modifier,
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+        )
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(44.dp)
+                    .background(
+                        if (isUnlocked) iconColor.copy(alpha = 0.15f) else MaterialTheme.colorScheme.outline.copy(alpha = 0.1f),
+                        CircleShape
+                    ),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = null,
+                    tint = if (isUnlocked) iconColor else MaterialTheme.colorScheme.outline,
+                    modifier = Modifier.size(24.dp)
+                )
+            }
+            Spacer(Modifier.height(8.dp))
             Text(
-                text = stringResource(R.string.support_creator),
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Bold
+                text = title,
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.Bold,
+                textAlign = TextAlign.Center
             )
-            Spacer(Modifier.height(12.dp))
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(28.dp),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
-            ) {
-                Column(
-                    modifier = Modifier.padding(20.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    Icon(
-                        imageVector = Icons.Rounded.Favorite,
-                        tint = MaterialTheme.colorScheme.error,
-                        modifier = Modifier.size(32.dp),
-                        contentDescription = null
-                    )
-                    Spacer(Modifier.height(12.dp))
-                    Text(
-                        text = stringResource(R.string.enjoying_app),
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold
-                    )
-                    Spacer(Modifier.height(8.dp))
-                    Text(
-                        text = stringResource(R.string.support_message),
-                        textAlign = TextAlign.Center,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    Spacer(Modifier.height(16.dp))
-                    Row(modifier = Modifier.fillMaxWidth()) {
-                        OutlinedButton(
-                            onClick = { /* TODO */ },
-                            modifier = Modifier.weight(1f),
-                            shape = RoundedCornerShape(12.dp)
-                        ) {
-                            Icon(Icons.Rounded.Star, contentDescription = null)
-                            Spacer(Modifier.width(8.dp))
-                            Text(stringResource(R.string.rate_app))
-                        }
-                        Spacer(Modifier.width(12.dp))
-                        Button(
-                            onClick = { /* TODO */ },
-                            modifier = Modifier.weight(1f),
-                            shape = RoundedCornerShape(12.dp),
-                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondaryContainer, contentColor = MaterialTheme.colorScheme.onSecondaryContainer)
-                        ) {
-                            Icon(Icons.Rounded.Coffee, contentDescription = null)
-                            Spacer(Modifier.width(8.dp))
-                            Text(stringResource(R.string.buy_coffee))
-                        }
-                    }
-                }
-            }
-        }
-
-        item {
-            Column(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(
-                        text = stringResource(R.string.made_with_love),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    Spacer(Modifier.width(4.dp))
-                    Icon(
-                        imageVector = Icons.Rounded.Favorite,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.size(16.dp)
-                    )
-                }
-                Spacer(Modifier.height(24.dp))
-                // App Info
-                Surface(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(16.dp),
-                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
-                ) {
-                    Row(
-                        modifier = Modifier.padding(16.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Icon(
-                            imageVector = Icons.Rounded.Info,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        Spacer(Modifier.width(12.dp))
-                        Column {
-                            Text(
-                                text = "Blackout v1.0.0",
-                                style = MaterialTheme.typography.bodyMedium,
-                                fontWeight = FontWeight.Medium
-                            )
-                            Text(
-                                text = stringResource(R.string.app_description),
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                    }
-                }
-                Spacer(Modifier.height(100.dp))
-            }
+            Text(
+                text = subtitle,
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = TextAlign.Center
+            )
         }
     }
 }
