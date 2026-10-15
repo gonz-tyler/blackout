@@ -383,7 +383,6 @@ fun SettingsScreen(
                         isDestructive = true
                     )
                 }
-                Spacer(Modifier.height(64.dp))
             }
 
             // --- Support Creator ---
@@ -493,7 +492,7 @@ fun SettingsScreen(
                             }
                         }
                     }
-                    Spacer(Modifier.height(100.dp))
+                    Spacer(Modifier.height(20.dp))
                 }
             }
         }
