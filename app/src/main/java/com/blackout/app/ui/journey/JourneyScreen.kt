@@ -1,5 +1,7 @@
 package com.blackout.app.ui.journey
 
+import android.content.Context
+import androidx.annotation.StringRes
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -14,6 +16,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
@@ -170,6 +173,7 @@ fun HabitStreakCard(
     val today = LocalDate.now()
     val isDueToday = habit.isDueOn(today)
     val habitColor = Color(habit.color)
+    val context = LocalContext.current
 
     Card(
         modifier = modifier
@@ -207,7 +211,7 @@ fun HabitStreakCard(
                         )
                         habit.getNextDueDate()?.let { nextDue ->
                             Text(
-                                text = stringResource(R.string.next_due_on, formatDueDate(nextDue)),
+                                text = stringResource(R.string.next_due_on, formatDueDate(context, nextDue)),
                                 style = MaterialTheme.typography.labelSmall,
                                 color = MaterialTheme.colorScheme.secondary
                             )
@@ -323,13 +327,13 @@ fun HabitDetailsBottomSheet(
     }
 }
 
-fun formatDueDate(date: LocalDate): String {
+fun formatDueDate(context: Context, date: LocalDate): String {
     val today = LocalDate.now()
     return when (date) {
-        today -> R.string.today
-        today.plusDays(1) -> R.string.tomorrow
+        today -> context.getString(R.string.today)
+        today.plusDays(1) -> context.getString(R.string.tomorrow)
         else -> date.format(DateTimeFormatter.ofPattern("MMM d"))
-    } as String
+    }
 }
 
 fun getHabitIcon(iconName: String): ImageVector {
