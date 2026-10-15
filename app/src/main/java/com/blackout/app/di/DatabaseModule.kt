@@ -3,6 +3,7 @@ package com.blackout.app.di
 import android.content.Context
 import androidx.room.Room
 import com.blackout.app.data.local.AppDatabase
+import com.blackout.app.data.local.dao.HabitDao
 import com.blackout.app.data.local.dao.QuizDao
 import dagger.Module
 import dagger.Provides
@@ -20,5 +21,6 @@ object DatabaseModule {
         Room.databaseBuilder(ctx, AppDatabase::class.java, "app.db").build()
 
     @Provides fun quizDao(db: AppDatabase): QuizDao = db.quizDao()
-}
 
+    @Provides fun habitDao(db: AppDatabase): HabitDao = db.habitDao()
+}
